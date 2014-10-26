@@ -1,0 +1,107 @@
+<html>
+	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+		<script type="text/javascript" src="platform.lib.min.js" defer></script>
+		<script type="text/javascript" src="Writer.js"></script>
+		<script type="text/javascript" src="PlatformTransformer.js"></script>
+		<script type="text/javascript" src="CSharpTransformer.js"></script>
+		<script type="text/javascript">
+		
+			function DownloadFile(filename, content){
+			
+				var data = new Blob([content], {type: "text/plain"});
+				var url = window.URL.createObjectURL(data);
+				var link = document.createElement("a");
+				
+				link.download = filename;
+				link.href = url;
+				link.click();
+				
+				window.setTimeout(function(){
+					window.URL.revokeObjectURL(url);
+				}, 3000);
+			
+			};
+		
+			$(document).ready(function(){
+				
+				var detected = typeof window.bungieNetPlatform === "object";
+				$("#detected").text(detected ? "Yes" : "No");
+				var lbl = $("#status");
+			
+				$("#start").click(function(){
+				
+					lbl.text("Running...");
+					var lang;
+					
+					switch($("#toLanguage").val().toLowerCase()){
+						
+						case "c#":
+							lang = new CSharpTransformer("BungieNetPlatform");
+							
+							lang.FileExtension = ".cs";
+							lang.UseWcf = true;
+							lang.EnumFlags = true;
+							
+							lang.Usings.push("using System;");
+							lang.Usings.push("using System.Linq;");
+							lang.Usings.push("using System.Collections.Generic;");
+							lang.Usings.push("using System.Runtime.Serialization;");
+							lang.Usings.push("using Newtonsoft.Json.Linq;");
+							lang.Usings.push("using BungieNetPlatform.Enums;");
+							lang.Usings.push("using Extensions;");
+							
+							function upperType(s){
+							
+								if(s !== null && s.length >= 1){
+									s = s.charAt(0).toUpperCase() + s.slice(1);
+								}
+								
+								return s;
+							
+							};
+							
+							lang.OnEnumNameDefined = upperType;
+							lang.OnClassNameDefined = upperType;
+							lang.OnConstructorDefined = upperType;
+							lang.OnFilenameDefined = function(name){
+								return upperType(name) + lang.FileExtension;
+							};
+							
+							break;
+						
+					}
+					
+					var t = new PlatformTransformer(window, lang);
+					var files = t.Transform();
+					
+					lbl.text("Done");
+					
+					//Output
+					files.forEach(function(f, i){
+						setTimeout(function(){ DownloadFile(f.filename, f.content); }, i * 500);
+					});
+				
+				});
+			
+			});
+		
+		</script>
+	</head>
+	<body>
+		
+		<p>Bungie.net Platform detected? <span id="detected"></span></p>
+		
+		<p>
+			<button id="start">Transform</button> to
+			<select id="toLanguage">
+				<option value="C#">C#</option>
+			</select>
+		</p>
+		
+		<p>
+			Status: <span id="status"></span>
+		</p>
+		
+	</body>
+</html>
